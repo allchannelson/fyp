@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Job Search</title>
+    <style>
+        /* Always set the map height explicitly to define the size of the div
+               * element that contains the map. */
+        #map {
+          height: 40em;
+          width: 40em;
+        }
+
+        /* Optional: Makes the sample page fill the window. */
+        html,
+        body {
+          height: 100%;
+          margin: 0;
+          padding: 0;
+        }
+    </style>
+</head>
+<body>
+    {% if job_list %}
+        <div id="map"></div>
+        <!-- Async script executes immediately and must be after any DOM elements used in callback. -->
+        <script
+          src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCY9n8R9K5NdhNLjUJzZm_uaGXdpIYKQOY&callback=initMap&libraries=&v=weekly"
+          async
+        ></script>
+        <script>
+            function success(position) {
+                window.mylatitude  = position.coords.latitude;
+                window.mylongitude = position.coords.longitude;
+                console.log(window.mylatitude + ", " + window.mylongitude);
+                window.mypostxt = "You";
+            }
+
+            function error() {
+                console.log('Unable to retrieve your location');
+                window.mylatitude  = 22.2806500;
+                window.mylongitude = 114.1657600;
+                window.mypostxt = "GPS Not Accurate";
+            }
+
+            if(!navigator.geolocation) { console.log('Geolocation not supported by browser') }
+            else { navigator.geolocation.getCurrentPosition(success, error); }
+
+            function initMap() {
+              const map = new google.maps.Map(document.getElementById("map"), {
+                zoom: 12,
+                center: { lat: window.mylatitude, lng: window.mylongitude },
+              });
+
+              <!-- from google documentation: https://developers.google.com/maps/documentation/javascript/markers -->
+              const svgMarker = {
+                path:
+                  "M10.453 14.016l6.563-6.609-1.406-1.406-5.156 5.203-2.063-2.109-1.406 1.406zM12 2.016q2.906 0 4.945 2.039t2.039 4.945q0 1.453-0.727 3.328t-1.758 3.516-2.039 3.070-1.711 2.273l-0.75 0.797q-0.281-0.328-0.75-0.867t-1.688-2.156-2.133-3.141-1.664-3.445-0.75-3.375q0-2.906 2.039-4.945t4.945-2.039z",
+                fillColor: "blue",
+                fillOpacity: 0.6,
+                strokeWeight: 0,
+                rotation: 0,
+                scale: 2,
+                anchor: new google.maps.Point(15, 30),
+              };
+
+              new google.maps.Marker({
+
+                position: { lat: window.mylatitude, lng: window.mylongitude },
+                icon: svgMarker,
+                map: map,
+                title: window.mypostxt,
+                label: window.mypostxt,
+              });
+
+              {% for job in job_list %}
+                  const thisMarker{{ forloop.counter }} = new google.maps.Marker({
+                    position: { lat: {{ job.location.lat }}, lng: {{ job.location.long }} },
+                    map,
+                    title: "{{ job.start_date|date:'M j' }} - {{ job.end_date|date:'M j' }}",
+                    label: "{{ job.name }}",
+                  });
+                  {% if job.note %}
+                      const thisInfoWindow{{ forloop.counter }} = new google.maps.InfoWindow({ content: "<div>{{ job.note }}</div>"});
+                      // thisMarker.addListener("click", () => {alert("")});
+                      thisMarker{{ forloop.counter }}.addListener("click", () => { thisInfoWindow{{ forloop.counter }}.open(map, thisMarker{{ forloop.counter }}); });
+                  {% endif %}
+              {% endfor %}
+            }
+
+
+
+
+        </script>
+        <ul>
+        {% for job in job_list %}
+            <li><a href="/jobs/{{ job.id }}/">{{ job.name }}</a> - From {{ job.start_date }} to {{ job.end_date }}. Meeting Time {{ job.meeting_date }}</li>
+        {% endfor %}
+        </ul>
+
+    {% else %}
+        <p>No jobs are available.</p>
+    {% endif %}
+</body>
+</html>
